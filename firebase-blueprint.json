@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User profile and statistics summary.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "totalMinutes": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "task": {
+      "title": "Task",
+      "description": "A task with accumulated focus time.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "totalSeconds": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastActiveAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title"]
+    },
+    "session": {
+      "title": "Focus Session",
+      "description": "A recorded Pomodoro session.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "taskId": { "type": "string" },
+        "durationSeconds": { "type": "number" },
+        "type": { "type": "string", "enum": ["work", "short_break", "long_break"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "taskId", "durationSeconds", "type"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "User profile data"
+    },
+    "/tasks/{taskId}": {
+      "schema": "task",
+      "description": "Tasks created by users"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "session",
+      "description": "Individual work session records"
+    }
+  }
+}
