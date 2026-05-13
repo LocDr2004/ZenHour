@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Save, RefreshCcw, Bell } from 'lucide-react';
 import { UserSettings } from '../types';
-import { db, doc, updateDoc, handleFirestoreError, OperationType } from '../lib/firebase';
+import { storage } from '../lib/storage';
 import { motion } from 'motion/react';
 
 interface SettingsProps {
@@ -18,18 +18,13 @@ export default function Settings({ userId, settings }: SettingsProps) {
     setLocalSettings(settings);
   }, [settings]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     setSaving(true);
-    try {
-      await updateDoc(doc(db, 'users', userId), {
-        settings: localSettings
-      });
-      alert('Settings saved!');
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
-    } finally {
+    storage.updateSettings(localSettings);
+    setTimeout(() => {
       setSaving(false);
-    }
+      alert('Settings saved locally!');
+    }, 500);
   };
 
   const handleChange = (key: keyof UserSettings, value: number | boolean) => {

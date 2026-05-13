@@ -3,7 +3,7 @@ import { Play, Pause, RotateCcw, SkipForward, Coffee, Brain, ListChecks } from '
 import { motion, AnimatePresence } from 'motion/react';
 import { TIMER_CONFIG, TimerMode, Task, UserSettings } from '../types';
 import { cn, formatDuration } from '../lib/utils';
-import { db, addDoc, collection, doc, updateDoc, increment, serverTimestamp, handleFirestoreError, OperationType } from '../lib/firebase';
+import { storage } from '../lib/storage';
 
 interface TimerProps {
   userId: string | undefined;
@@ -66,26 +66,22 @@ export default function Timer({ userId, activeTask, settings, onSessionComplete 
 
     if (mode === 'work' && userId && activeTask) {
       // Save session
-      try {
-        await addDoc(collection(db, 'sessions'), {
-          userId,
-          taskId: activeTask.id,
-          durationSeconds: currentDuration,
-          type: 'work',
-          createdAt: serverTimestamp(),
-        });
+      storage.addSession({
+        userId,
+        taskId: activeTask.id,
+        durationSeconds: currentDuration,
+        type: 'work',
+        createdAt: new Date() as any,
+      });
 
-        // Update task time
-        await updateDoc(doc(db, 'tasks', activeTask.id), {
-          totalSeconds: increment(currentDuration),
-          lastActiveAt: serverTimestamp(),
-        });
+      // Update task time
+      storage.updateTask(activeTask.id, {
+        totalSeconds: (activeTask.totalSeconds || 0) + currentDuration,
+        lastActiveAt: new Date() as any,
+      });
 
-        onSessionComplete(currentDuration);
-        setSessionCount(prev => prev + 1);
-      } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, 'sessions/tasks');
-      }
+      onSessionComplete(currentDuration);
+      setSessionCount(prev => prev + 1);
     }
 
     // Auto-switch mode

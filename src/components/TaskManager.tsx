@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, CheckCircle2, Circle, Trash2, Clock, Tag, Target, Edit2, Check, X, AlertCircle } from 'lucide-react';
 import { Task, Priority } from '../types';
-import { db, collection, addDoc, serverTimestamp, handleFirestoreError, OperationType, deleteDoc, doc, updateDoc } from '../lib/firebase';
+import { storage } from '../lib/storage';
 
 import { cn, formatDuration } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,25 +22,21 @@ export default function TaskManager({ userId, tasks, activeTask, onSelectTask }:
   const [editCategory, setEditCategory] = useState('');
   const [editPriority, setEditPriority] = useState<Priority>('medium');
 
-  const handleAddTask = async (e: React.FormEvent) => {
+  const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
 
-    try {
-      await addDoc(collection(db, 'tasks'), {
-        userId,
-        title: newTaskTitle.trim(),
-        category: newTaskCategory,
-        priority: newTaskPriority,
-        completed: false,
-        totalSeconds: 0,
-        createdAt: serverTimestamp(),
-        lastActiveAt: serverTimestamp(),
-      });
-      setNewTaskTitle('');
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'tasks');
-    }
+    storage.addTask({
+      userId,
+      title: newTaskTitle.trim(),
+      category: newTaskCategory,
+      priority: newTaskPriority,
+      completed: false,
+      totalSeconds: 0,
+      createdAt: new Date() as any,
+      lastActiveAt: new Date() as any,
+    });
+    setNewTaskTitle('');
   };
 
   const startEditing = (task: Task) => {
@@ -54,37 +50,25 @@ export default function TaskManager({ userId, tasks, activeTask, onSelectTask }:
     setEditingTaskId(null);
   };
 
-  const handleUpdateTask = async (taskId: string) => {
+  const handleUpdateTask = (taskId: string) => {
     if (!editTitle.trim()) return;
-    try {
-      await updateDoc(doc(db, 'tasks', taskId), {
-        title: editTitle.trim(),
-        category: editCategory,
-        priority: editPriority
-      });
-      setEditingTaskId(null);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `tasks/${taskId}`);
-    }
+    storage.updateTask(taskId, {
+      title: editTitle.trim(),
+      category: editCategory,
+      priority: editPriority
+    });
+    setEditingTaskId(null);
   };
 
-  const toggleComplete = async (task: Task) => {
-    try {
-      await updateDoc(doc(db, 'tasks', task.id), {
-        completed: !task.completed
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `tasks/${task.id}`);
-    }
+  const toggleComplete = (task: Task) => {
+    storage.updateTask(task.id, {
+      completed: !task.completed
+    });
   };
 
-  const deleteTask = async (taskId: string) => {
+  const deleteTask = (taskId: string) => {
     if (!confirm('Xóa task này?')) return;
-    try {
-      await deleteDoc(doc(db, 'tasks', taskId));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `tasks/${taskId}`);
-    }
+    storage.deleteTask(taskId);
   };
 
   return (
@@ -146,7 +130,7 @@ export default function TaskManager({ userId, tasks, activeTask, onSelectTask }:
             const pA = priorityWeight[a.priority || 'medium'];
             const pB = priorityWeight[b.priority || 'medium'];
             if (pA !== pB) return pB - pA;
-            return (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0);
+            return (new Date(b.createdAt as any).getTime() || 0) - (new Date(a.createdAt as any).getTime() || 0);
           }).map((task, index) => (
             <motion.div
               layout

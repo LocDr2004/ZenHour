@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { auth, onAuthStateChanged, db, collection, query, where, onSnapshot, orderBy, User, doc, setDoc, serverTimestamp, handleFirestoreError, OperationType } from './lib/firebase';
+import { auth, onAuthStateChanged, User } from './lib/firebase';
 import { Task, FocusSession, UserProfile, UserSettings } from './types';
+import { storage } from './lib/storage';
 import Auth from './components/Auth';
 import Timer from './components/Timer';
 import TaskManager from './components/TaskManager';
@@ -26,82 +27,53 @@ export default function App() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState<'timer' | 'stats' | 'settings'>('timer');
 
+  const loadLocalData = () => {
+    setTasks(storage.getTasks());
+    setSessions(storage.getSessions() as any);
+    const localProfile = storage.getProfile();
+    if (localProfile) setProfile(localProfile);
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       setLoading(false);
+      
       if (!u) {
-        setTasks([]);
-        setSessions([]);
-        setActiveTask(null);
         setProfile(null);
       } else {
-        // Ensure profile exists
-        const userRef = doc(db, 'users', u.uid);
-        onSnapshot(userRef, (docSnap) => {
-          if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
-          } else {
-            const newProfile = {
-              uid: u.uid,
-              email: u.email || '',
-              displayName: u.displayName || 'Master',
-              totalMinutes: 0,
-              createdAt: serverTimestamp(),
-              settings: DEFAULT_SETTINGS
-            };
-            setDoc(userRef, newProfile).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${u.uid}`));
-          }
-        }, (error) => handleFirestoreError(error, OperationType.GET, `users/${u.uid}`));
+        let localProfile = storage.getProfile();
+        if (!localProfile || localProfile.uid !== u.uid) {
+          localProfile = {
+            uid: u.uid,
+            email: u.email || '',
+            displayName: u.displayName || 'Master',
+            totalMinutes: 0,
+            createdAt: new Date() as any,
+            settings: DEFAULT_SETTINGS
+          };
+          storage.saveProfile(localProfile);
+        }
+        setProfile(localProfile);
       }
     });
-    return () => unsubscribe();
+
+    loadLocalData();
+    window.addEventListener('storage_update', loadLocalData);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage_update', loadLocalData);
+    };
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-
-    // Tasks listener
-    const qTasks = query(
-      collection(db, 'tasks'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubTasks = onSnapshot(qTasks, (snapshot) => {
-      const taskList: Task[] = [];
-      snapshot.forEach((doc) => {
-        taskList.push({ id: doc.id, ...doc.data() } as Task);
-      });
-      setTasks(taskList);
-      
-      if (activeTask) {
-        const updated = taskList.find(t => t.id === activeTask.id);
-        if (updated) setActiveTask(updated);
-        else setActiveTask(null);
-      }
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'tasks'));
-
-    // Sessions listener (for heatmap)
-    const qSessions = query(
-      collection(db, 'sessions'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubSessions = onSnapshot(qSessions, (snapshot) => {
-      const sessionList: FocusSession[] = [];
-      snapshot.forEach((doc) => {
-        sessionList.push({ id: doc.id, ...doc.data() } as FocusSession);
-      });
-      setSessions(sessionList);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'sessions'));
-
-    return () => {
-      unsubTasks();
-      unsubSessions();
-    };
-  }, [user, activeTask?.id]);
+    if (activeTask) {
+      const updated = tasks.find(t => t.id === activeTask.id);
+      if (updated) setActiveTask(updated);
+      else setActiveTask(null);
+    }
+  }, [tasks, activeTask?.id]);
 
   const handleSessionComplete = (duration: number) => {
     // Session completed
@@ -167,12 +139,16 @@ export default function App() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <TaskManager 
-                  userId={user?.uid || ''} 
-                  tasks={tasks} 
-                  activeTask={activeTask} 
-                  onSelectTask={setActiveTask} 
-                />
+                {user ? (
+                  <TaskManager 
+                    userId={user.uid} 
+                    tasks={tasks} 
+                    activeTask={activeTask} 
+                    onSelectTask={setActiveTask} 
+                  />
+                ) : (
+                  <div className="p-12 text-center">Loading user identity...</div>
+                )}
               </div>
             </section>
 
