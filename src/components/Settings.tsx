@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Save, RefreshCcw, Bell } from 'lucide-react';
+import { Save, RefreshCcw, Bell, Check } from 'lucide-react';
 import { UserSettings } from '../types';
 import { storage } from '../lib/storage';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface SettingsProps {
   userId: string;
@@ -12,6 +12,7 @@ interface SettingsProps {
 export default function Settings({ userId, settings }: SettingsProps) {
   const [localSettings, setLocalSettings] = useState<UserSettings>(settings);
   const [saving, setSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
 
   // Keep local state in sync if settings update from external source (like a reset or background update)
   React.useEffect(() => {
@@ -23,7 +24,8 @@ export default function Settings({ userId, settings }: SettingsProps) {
     storage.updateSettings(localSettings);
     setTimeout(() => {
       setSaving(false);
-      alert('Settings saved locally!');
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 2000);
     }, 500);
   };
 
@@ -87,16 +89,32 @@ export default function Settings({ userId, settings }: SettingsProps) {
           </div>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full mt-10 py-4 bg-brand-primary text-white font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_#00E676] disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {saving ? <RefreshCcw className="animate-spin" /> : <Save size={20} />}
-          <span>Verify & Save</span>
-        </motion.button>
+        <div className="relative">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full mt-10 py-4 bg-brand-primary text-white font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_#00E676] disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {saving ? <RefreshCcw className="animate-spin" /> : <Save size={20} />}
+            <span>Verify & Save</span>
+          </motion.button>
+
+          <AnimatePresence>
+            {showSaved && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 text-brand-primary font-black uppercase text-[10px] tracking-widest bg-brand-accent px-4 py-1 border-2 border-brand-primary"
+              >
+                <Check size={12} />
+                <span>Protocol Updated</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       <div className="p-4 border-2 border-black bg-white flex items-center gap-4 italic text-xs font-serif leading-tight">

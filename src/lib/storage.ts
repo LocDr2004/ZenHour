@@ -1,4 +1,4 @@
-import { Task, UserProfile, FocusSession, UserSettings } from './types';
+import { Task, UserProfile, FocusSession, UserSettings } from '../types';
 
 const STORAGE_KEYS = {
   PROFILE: 'pomofocus_profile',
