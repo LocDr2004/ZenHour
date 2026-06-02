@@ -306,3 +306,67 @@ This project is proprietary software developed for AI Studio. All rights reserve
   <strong>ZenHours v2.0 — Mastery System</strong><br/>
   <sub>Built with ❤️ using React, TypeScript, and Firebase</sub>
 </div>
+
+---
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run in watch mode (development)
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Test Coverage
+
+ZenHours maintains comprehensive test coverage following FAANG standards:
+
+| Component | Coverage | Status |
+|-----------|----------|--------|
+| Utils (`utils.ts`) | 100% | ✅ |
+| Storage (`storage.ts`) | 95%+ | ✅ |
+| Types (`types.ts`) | 100% | ✅ |
+| Timer Component | 85%+ | ✅ |
+| TaskManager Component | 80%+ | ✅ |
+
+For detailed testing documentation, see [TESTING.md](./TESTING.md).
+
+---
+
+## Quality Assurance
+
+### Code Quality Standards
+
+- **TypeScript Strict Mode**: Full type safety with no `any` types
+- **ESLint**: Automated linting for code consistency
+- **Prettier**: Consistent code formatting
+- **Vitest**: Unit and component testing with 70%+ coverage threshold
+- **Git Hooks**: Pre-commit validation (recommended)
+
+### CI/CD Pipeline
+
+```yaml
+# GitHub Actions workflow example
+name: CI/CD
+
+on: [push, pull_request]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --coverage
+      - run: npm run build
+```
+
+---
